@@ -56,10 +56,26 @@ function App() {
 
 function UserMenu() {
   const navigate = useNavigate();
-  const stored = (() => { try { return JSON.parse(localStorage.getItem('user')) || null; } catch { return null; } })();
-  const initials = stored?.username ? stored.username.split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase() : 'SS';
+  const getUser = () => {
+    try {
+      const l = JSON.parse(localStorage.getItem('user') || 'null');
+      const s = JSON.parse(sessionStorage.getItem('user') || 'null');
+      return l || s;
+    } catch {
+      return null;
+    }
+  };
+  const user = getUser();
+  const initials = user?.username ? user.username.split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase() : null;
   const handleNav = (path) => { navigate(path); };
-  const handleLogout = () => { localStorage.removeItem('user'); navigate('/'); };
+  const handleLogout = () => { localStorage.removeItem('user'); sessionStorage.removeItem('user'); navigate('/'); };
+  if (!user) {
+    return (
+      <div className="d-flex align-items-center">
+        <button className="btn btn-outline-light" onClick={() => navigate('/')}>Log In</button>
+      </div>
+    );
+  }
   return (
     <div className="d-flex align-items-center">
       <div className="seal me-3" title="Blockchain security active"></div>
