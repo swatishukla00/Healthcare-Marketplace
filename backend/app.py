@@ -33,6 +33,15 @@ def is_strong_password(password: str) -> bool:
         return False
     return has_lower and has_upper and has_digit and has_special
 
+def is_valid_username(username: str) -> bool:
+    if not isinstance(username, str):
+        return False
+    if len(username) < 3 or len(username) > 32:
+        return False
+    # letters, numbers, underscore, dot, hyphen
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-")
+    return all(c in allowed for c in username)
+
 def query_db(query, args=(), one=False):
     conn = connect_db()
     cur = conn.cursor()
@@ -52,6 +61,8 @@ def signup():
     role = data.get('role', 'provider')  # default role provider
     if not username or not password:
         return jsonify({'error': 'Username and password required.'}), 400
+    if not is_valid_username(username):
+        return jsonify({'error': 'Username must be 3-32 chars; letters, numbers, _ . - only.'}), 400
     if not is_strong_password(password):
         return jsonify({'error': 'Password too weak. Use 8+ chars with upper, lower, number, special.'}), 400
 
@@ -61,7 +72,7 @@ def signup():
         return jsonify({'status': 'User registered successfully.'})
     except sqlite3.IntegrityError as e:
         print("Signup error:", e)
-        return jsonify({'error': 'Username already exists or invalid data.'}), 400
+        return jsonify({'error': 'Account already exists. Please log in.'}), 409
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -71,12 +82,14 @@ def login():
     password = data.get('password')
     if not username or not password:
         return jsonify({'error': 'Username and password required.'}), 400
-
-    pw_hash = hash_password(password)
-    user = query_db("SELECT id, role FROM users WHERE username=? AND password_hash=?", (username, pw_hash), one=True)
-    if user:
-        return jsonify({'status': 'Login successful', 'user_id': user[0], 'role': user[1]})
-    return jsonify({'error': 'Invalid credentials'}), 401
+    # Check if account exists first
+    account = query_db("SELECT id, password_hash, role FROM users WHERE username=?", (username,), one=True)
+    if not account:
+        return jsonify({'error': 'Account not found. Please sign up.'}), 404
+    user_id, stored_hash, role = account[0], account[1], account[2]
+    if hash_password(password) != stored_hash:
+        return jsonify({'error': 'Incorrect password.'}), 401
+    return jsonify({'status': 'Login successful', 'user_id': user_id, 'role': role})
 
 @app.route('/datasets', methods=['GET'])
 def list_datasets():
