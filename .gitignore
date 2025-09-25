@@ -1,0 +1,20 @@
+# Node
+frontend/node_modules/
+frontend/.env
+
+# Python
+backend/__pycache__/
+backend/.env
+
+# Databases and local data
+*.db
+backend/data_catalog.db
+data_catalog.db
+
+# Build artifacts
+frontend/build/
+
+# OS files
+Thumbs.db
+.DS_Store
+
